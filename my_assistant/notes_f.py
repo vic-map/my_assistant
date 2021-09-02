@@ -1,45 +1,31 @@
 import json
 from pathlib import Path
+from sys import platform
+import os
 
 
-default_notes_path = '\\notes\\'
+note_path = os.path.abspath('.') + "\\notes\\"
 
 
-# write_note()  # потрібно бути в папці з нотатками
-# find_note(Path('notes\\')) # потрібно бути на рівень вище ніж папка з нотатками
-# delete_notes("Тут має бути назва файлу") # потрібно бути в папці з нотатками
-# print(change_note('1.json'))  # потрібно бути в папці з нотатками
-# add_tag('1.json')  # потрібно бути в папці з нотатками
-# print(find_and_sort_by_tag())
-
-
-# ========= Yura ========
-
-
-def write_note(title, tags, text):
+def write_note(arguments):
+    title = arguments.split(sep=', ')[0]
+    tags = arguments.split(sep=', ')[1].split(sep='; ')
+    text = arguments.split(sep=', ')[2]
     note = {'name': title, 'tags': tags, 'text': text}
     message = dump_note(note)
     return message
 
 
 def dump_note(note):
-    path = default_note_path + note['name'] + '.json'
+    path = note_path + note['name'] + '.json'
     with open(path, "w") as fh:
         json.dump(note, fh)
         message = f"note {note['name']} has been written"
     return message
 
 
-def read_note(title):
-    filename = title + '.json'
-    for item in default_notes_path.iterdir():
-        if item == filename:
-            message = get_note(title)['text']
-    return message
-
-
 def get_note(title):
-    path = default_note_path + title + '.json'
+    path = note_path + title + '.json'
     with open(path, 'r') as fh:
         note = json.load(fh)
     return note
@@ -47,13 +33,16 @@ def get_note(title):
 
 def find_note(title):
     filename = title + '.json'
-    for item in default_notes_path.iterdir():
-        if item == filename:
+    message = 'there is no such note'
+    for item in Path(note_path).iterdir():
+        if item.name == filename:
             message = get_note(title)
     return message
 
 
-def change_note(title, text):
+def change_note(arguments):
+    title = arguments.split(sep=', ')[0]
+    text = arguments.split(sep=', ')[1]
     note = get_note(title)
     note['text'] = text
     dump_note(note)
@@ -61,19 +50,31 @@ def change_note(title, text):
     return message
 
 
-def edit_note(title):
-    pass
+def edit_note(name):
+    filename = note_path + name + '.json'
+    print('finish editing in external editor')
+    if platform == "linux" or platform == "linux2":
+        osCommandString = f"nano {filename}"
+        os.system(osCommandString)
+    elif platform == "darwin":
+        osCommandString = f"Text Edit {filename}"
+        os.system(osCommandString)
+    elif platform == "win32":
+        osCommandString = f"notepad.exe {filename}"
+        os.system(osCommandString)
+    return f'the note {name} has been adited'
 
 
 def remove_note(title):
-    path = default_note_path + title + '.json'
+    path = Path(note_path + title + '.json')
     path.unlink()
     message = f'the note {title} has been removed'
     return message
-#
 
 
-def add_tag(title, tag):
+def add_tag(arguments):
+    title = arguments.split(sep=', ')[0]
+    tag = arguments.split(sep=', ')[1]
     note = get_note(title)
     if tag in note['tags']:
         message = f'there is such tag in the note {title}'
@@ -84,7 +85,9 @@ def add_tag(title, tag):
     return message
 
 
-def remove_tag(title, tag):
+def remove_tag(arguments):
+    title = arguments.split(sep=', ')[0]
+    tag = arguments.split(sep=', ')[1]
     note = get_note(title)
     if tag in note['tags']:
         note['tags'].remove(tag)
@@ -97,9 +100,17 @@ def remove_tag(title, tag):
 
 def find_tag(tag):
     note_list = []
-    for item in default_notes_path.iterdir():
-        note = get_note(item.pref())
+    for item in Path(note_path).iterdir():
+        note = get_note(item.name.split(sep='.')[0])
         if tag in note['tags']:
             note_list.append(note['name'])
-            message = f"the {tag} is in notes:\n {note_list.sort()}"
+            message = f"the {tag} is in notes:\n {note_list}"
     return message
+
+
+# def read_note(title):
+#     filename = title + '.json'
+#     for item in default_notes_path.iterdir():
+#         if item == filename:
+#             message = get_note(title)['text']
+#     return message

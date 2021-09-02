@@ -1,3 +1,4 @@
+
 from datetime import timedelta
 from datetime import datetime
 import re
@@ -6,14 +7,14 @@ import os
 import json
 import pickle
 
-default_contact_path = "contacts/"
+contact_path = os.path.abspath('.') + "\contacts\\"
 message = "operation failed"
 
 
 def input_error(func):
-    def inner(input_text):
+    def inner(input):
         try:
-            result = func()
+            result = func(input)
             return result
         except KeyError:
             print('Enter correct user name')
@@ -26,35 +27,43 @@ def input_error(func):
     return inner
 
 
-# @ input_error
+@ input_error
 def add_contact(arguments):
-    print('in add_contact')
     contact = {}
     contact['name'] = arguments.split(sep=', ')[0]
-    contact['phones'] = arguments.split(sep=', ')[1]
+    contact['phones'] = arguments.split(sep=', ')[1].split(sep='; ')
     contact['address'] = arguments.split(sep=', ')[2]
     contact['birthday'] = arguments.split(sep=', ')[3]
-    contact['emails'] = arguments.split(sep=', ')[4]
-    if phones_checkup(contact['phones']) and email_checkup(email):
+    contact['emails'] = arguments.split(sep=', ')[4].split(sep='; ')
+    if phone_checkup(contact['phones']) and email_checkup(contact['emails']):
         message = dump_contact(contact)
     else:
         message = 'check oyur input, smth is incorrect'
     return message
 
 
+@ input_error
 def find_contact(text):
     message = f'contact {text} not found'
-    for item in Path(default_contact_path).iterdir():
+    for item in Path(contact_path).iterdir():
         title = item.name.split(sep='.')[0]
         if text == title:
-            print(get_contact(title))
-            message = "serch comlited"
+            contact = get_contact(title)
+            print_contact(contact)
+            message = "serch complited"
     return message
 
 
+@ input_error
+def print_contact(contact):
+    print(
+        f" \n - name: {contact['name']}\n - phones: {contact['phones']}\n - address: {contact['address']}\n - birthday: {contact['birthday']}\n - emails: {contact['emails']}\n---------- ")
+
+
+@ input_error
 def dump_contact(contact):
 
-    path = default_contact_path + contact['name'] + '.json'
+    path = contact_path + contact['name'] + '.json'
 
     with open(path, "w") as fh:
         json.dump(contact, fh)
@@ -62,32 +71,37 @@ def dump_contact(contact):
     return message
 
 
+@ input_error
 def get_contact(name):
-    path = Path(default_contact_path + name + '.json')
+    path = Path(contact_path + name + '.json')
     with open(path, 'r') as fh:
         contact = json.load(fh)
     return contact
 
 
+@ input_error
 def deleting_contact(name):
     contact = get_contact(name)
     if contact:
-        os.remove(default_contact_path + contact['name'] + '.json')
+        os.remove(contact_path + contact['name'] + '.json')
         message = f"the contact {contact['name']} was removed"
     return message
 
 
+@ input_error
 def find_b_days(text):
     interval = int(text)
-    for item in Path(default_contact_path).iterdir():
-        current_contact = get_contact(item.name.split(sep='.')[0])
-        if interval <= days_to_birthday(current_contact['birthday']):
-            print(current_contact)
+    for item in Path(contact_path).iterdir():
+        contact = get_contact(item.name.split(sep='.')[0])
+        if interval >= days_to_birthday(contact['birthday']):
+            print(f"{contact['name']} --> {contact['birthday']}")
     message = 'there are no more birthdays'
     return message
 
 
-def days_to_birthday(birthday):
+@ input_error
+def days_to_birthday(birthday_text):
+    birthday = datetime.strptime(birthday_text, '%Y-%m-%d').date()
     if birthday < datetime.now().date():
         nextbday = datetime(year=datetime.now().year,
                             month=birthday.month, day=birthday.day).date()
@@ -97,39 +111,45 @@ def days_to_birthday(birthday):
         return (nextbday - datetime.now().date()).days
 
 
-def phones_checkup(phones):
-    print('in phones_checkup')
+# @ input_error
+def phone_checkup(phones):
     for phone_number in phones:
         checkup = re.findall(
-            r"\+380\(\d{2}\)\d{3}\-\d{2}\-\d{2}|\+380\(\d{2}\)\d{3}\-\d{1}\-\d{3}", phone_number)
+            r"\+380\(\d{2}\)\d{3}\-\d{2}\-\d{2}|\+380\(\d{2}\)\d{3}\-\d{1}\-\d{3}|\+38\(0\d{2}\)\d{3}\-\d{1}\-\d{3}|\(0\d{2}\)\d{3}\-\d{1}\-\d{3}|0\d{2}\d{3}\-\d{1}\-\d{3}", phone_number)
         if checkup:
             return True
         else:
+            print(f'phone_number {phone_number} is false')
             return False
 
 
-def emails_checkup(email):
-    print('in emails_checkup')
-    checkup = re.findall(
-        r'[a-zA-Z]+[a-zA-Z0-9_.]+@{1}[a-z]+\.[a-z]{2,}', text)
-    if checkup:
-        return True
-    else:
-        return False
+@ input_error
+def email_checkup(emails):
+    for email in emails:
+        checkup = re.findall(
+            r'[a-zA-Z]+[a-zA-Z0-9_.]+@{1}[a-z]+\.[a-z]{2,}', email)
+        if checkup:
+            return True
+        else:
+            print(f'email {email} is false')
+            return False
 
 
 @ input_error
-def change_contact(name, attribute, value):
+def change_name(name, new_value):
     contact = get_contact(name)
-    contact[attribute] = value
+    contact['name'] = new_value
+    deleting_contact(name)
     dump_contact(contact)
     message = 'contact has been chenged'
     return message
 
 
 @ input_error
-def add_phone(name, new_value):
-    if phones_checkup(new_value):
+def add_phone(arguments):
+    name = arguments.split(sep=', ')[0]
+    new_value = arguments.split(sep=', ')[1]
+    if phone_checkup(new_value):
         contact = get_contact(name)
         if new_value in contact['phones']:
             message = f'{new_value} already exists'
@@ -141,7 +161,33 @@ def add_phone(name, new_value):
 
 
 @ input_error
-def add_email(name, new_value):
+def remove_phone(arguments):
+    name = arguments.split(sep=', ')[0]
+    value = arguments.split(sep=', ')[1]
+    contact = get_contact(name)
+    if value in contact['phones']:
+        contact['phones'].remove(value)
+        dump_contact(contact)
+        message = f'phone number {value} has been removed from contact {name}'
+    return message
+
+
+@ input_error
+def remove_email(arguments):
+    name = arguments.split(sep=', ')[0]
+    value = arguments.split(sep=', ')[1]
+    contact = get_contact(name)
+    if value in contact['emails']:
+        contact['emails'].remove(value)
+        dump_contact(contact)
+        message = f'email {value} has been removed from contact {name}'
+    return message
+
+
+@ input_error
+def add_email(arguments):
+    name = arguments.split(sep=', ')[0]
+    new_value = arguments.split(sep=', ')[1]
     if email_checkup(new_value):
         contact = get_contact(name)
         if new_value in contact['emails']:
@@ -153,21 +199,36 @@ def add_email(name, new_value):
     return message
 
 
+@ input_error
 def show_all():
-    for item in default_contact_path.iterdir():
-        print(get_contact(item))
+    for item in Path(contact_path).iterdir():
+        contact = get_contact(item.name.split(sep='.')[0])
+        print_contact(contact)
     message = 'the contact list ended'
     return message
 
 
-def set_birthday(name, new_value):
-    if isinstance(new_value, datetime(year, month, day)):
-        contact = get_contact(name)
-        contact['birthday'] = new_value
-        dump_contact(contact)
-        message = 'birthday have been set'
-    else:
-        message = f'{new_value} is not datetime object'
+@ input_error
+def set_b_day(arguments):
+    name = arguments.split(sep=', ')[0]
+    new_value = arguments.split(sep=', ')[1]
+    contact = get_contact(name)
+    contact['birthday'] = new_value
+    dump_contact(contact)
+    message = 'birthday have been set'
+
+    return message
+
+
+@ input_error
+def set_address(arguments):
+    name = arguments.split(sep=', ')[0]
+    new_value = arguments.split(sep=', ')[1]
+    contact = get_contact(name)
+    contact['address'] = new_value
+    dump_contact(contact)
+    message = 'address have been set'
+
     return message
 
 
@@ -198,4 +259,7 @@ def change_email(name, old_value, new_value):
 
 
 if __name__ == "__main__":
-    print('00000000000')
+
+    welcome_text = 'wooo'
+
+    print(welcome_text)
