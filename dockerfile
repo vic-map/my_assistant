@@ -1,6 +1,6 @@
 FROM python:3-slim-buster
 
-WORKDIR app
+WORKDIR /app
 
 RUN pip install pipenv
 
